@@ -10,6 +10,7 @@ from icalendar import Calendar
 import re
 import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from datetime import datetime
 
 # config should contain
 config = yaml.safe_load(open("utrechtcarpool.yaml"))
@@ -75,7 +76,11 @@ def get_location(location, time):
 def normalize_ics(file='calendar.ics'):
     """
     Given ICS file, normalize for carpool accounting to fixed set of drivers, times, locations.
+    Only look for past events
     """
+
+    now = datetime.datetime.now()
+    
     with open(file,'rb') as g:
         gcal = Calendar.from_ical(g.read())
         # Only look at events (name == 'VEVENT') that are not cancelled (STATUS != 'TRANSPARENT')
@@ -85,7 +90,8 @@ def normalize_ics(file='calendar.ics'):
                 c.get('DTSTART')),c.get('DTSTART').dt) 
                     for c in gcal.walk() 
                         if (c.name == 'VEVENT' and 
-                            c.get('TRANSP') != 'TRANSPARENT')]
+                            c.get('TRANSP') != 'TRANSPARENT' and
+                            c.get('DTSTART').dt < now)]
     return normed
 
 def carpool_account(lastevents, tripcost=16):
